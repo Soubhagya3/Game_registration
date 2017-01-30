@@ -1,5 +1,7 @@
 package com.soubhagya.android.game_test;
 
+import android.content.Context;
+import android.content.Intent;
 import android.content.SharedPreferences;
 import android.os.Bundle;
 import android.support.annotation.Nullable;
@@ -18,24 +20,36 @@ import com.google.firebase.database.DatabaseReference;
 import com.google.firebase.database.FirebaseDatabase;
 import com.google.firebase.database.MutableData;
 import com.google.firebase.database.Transaction;
+import com.google.firebase.database.ValueEventListener;
 
 /**
  * Created by soubhagya on 28/1/17.
  */
 
 public class CreateTeamActivity extends AppCompatActivity{
-    private EditText mTeamNameEditText;
-    private EditText mPlayerNameEditText;
-    private EditText mPasswordEditText;
-    private Button mSubmitButton;
+
+    public static Intent newIntent(Context context, boolean teamRegistered, String teamName, String phone) {
+        Intent intent = new Intent(context, CreateTeamActivity.class);
+        intent.putExtra(Constants.EXTRAS.TEAM_REGISTERED, teamRegistered);
+        intent.putExtra(Constants.EXTRAS.TEAMNAME, teamName);
+        intent.putExtra(Constants.EXTRAS.PHONE, phone);
+        return intent;
+    }
 
     private String mTeamName;
+    private String mPhone;
     private String mPlayerName;
-    private String mPassword;
+    private String mCharacterNumber;
 
+    private boolean mTeamRegistered;
     private String mTeamLocation;
 
     private DatabaseReference mFirebaseReference;
+
+    //UI components
+    private EditText mPlayerNameEditText;
+    private EditText mCharacterNumberEditText;
+    private Button mSubmitButton;
 
     @Override
     protected void onCreate(@Nullable Bundle savedInstanceState) {
@@ -44,25 +58,9 @@ public class CreateTeamActivity extends AppCompatActivity{
 
         mFirebaseReference = FirebaseDatabase.getInstance().getReference();
 
-        mTeamNameEditText = (EditText) findViewById(R.id.team_name_edit_text);
-        mTeamNameEditText.addTextChangedListener(new TextWatcher() {
-            @Override
-            public void beforeTextChanged(CharSequence s, int start, int count, int after) {
+        getAllExtras();
 
-            }
-
-            @Override
-            public void onTextChanged(CharSequence s, int start, int before, int count) {
-                mTeamName = s.toString();
-            }
-
-            @Override
-            public void afterTextChanged(Editable s) {
-
-            }
-        });
-
-        mPlayerNameEditText = (EditText) findViewById(R.id.player_name_edit_text);
+        mPlayerNameEditText = (EditText) findViewById(R.id.playerName_editText);
         mPlayerNameEditText.addTextChangedListener(new TextWatcher() {
             @Override
             public void beforeTextChanged(CharSequence s, int start, int count, int after) {
@@ -80,8 +78,8 @@ public class CreateTeamActivity extends AppCompatActivity{
             }
         });
 
-        mPasswordEditText = (EditText) findViewById(R.id.password_edit_text);
-        mPasswordEditText.addTextChangedListener(new TextWatcher() {
+        mCharacterNumberEditText = (EditText) findViewById(R.id.character_number_editText);
+        mCharacterNumberEditText.addTextChangedListener(new TextWatcher() {
             @Override
             public void beforeTextChanged(CharSequence s, int start, int count, int after) {
 
@@ -89,7 +87,7 @@ public class CreateTeamActivity extends AppCompatActivity{
 
             @Override
             public void onTextChanged(CharSequence s, int start, int before, int count) {
-                mPassword = s.toString();
+                mCharacterNumber = s.toString();
             }
 
             @Override
@@ -102,49 +100,47 @@ public class CreateTeamActivity extends AppCompatActivity{
         mSubmitButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                if (mTeamName!=null && mPlayerName!=null && mPassword!=null) {
-                    mFirebaseReference.child(Constants.FIREBASE.AVAILABLE_LOCATIONS)
-                            .runTransaction(new Transaction.Handler() {
-                                @Override
-                                public Transaction.Result doTransaction(MutableData mutableData) {
-                                    MutableData firstNode = mutableData.getChildren().iterator().next();
+                    if (mPlayerName != null && mCharacterNumber != null) {
+                        mFirebaseReference.child(Constants.FIREBASE.AVAILABLE_LOCATIONS)
+                                .runTransaction(new Transaction.Handler() {
+                                    @Override
+                                    public Transaction.Result doTransaction(MutableData mutableData) {
+                                        MutableData firstNode = mutableData.getChildren().iterator().next();
 
-                                    if (firstNode != null) {
-                                        mTeamLocation = firstNode.getKey();
-                                        firstNode.setValue(null);
-                                        return Transaction.success(mutableData);
+                                        if (firstNode != null) {
+                                            mTeamLocation = firstNode.getKey();
+                                            firstNode.setValue(null);
+                                            return Transaction.success(mutableData);
+                                        } else {
+                                            return Transaction.success(mutableData);
+                                        }
                                     }
-                                    else {
-                                        return Transaction.success(mutableData);
-                                    }
-                                }
 
-                                @Override
-                                public void onComplete(DatabaseError databaseError, boolean b, DataSnapshot dataSnapshot) {
-                                    if (databaseError != null) {
-                                        Log.d("TRANSACTION", "Database error occurred");
-                                        Toast.makeText(getApplicationContext(),
-                                                "Database error occurred!",
-                                                Toast.LENGTH_SHORT)
-                                                .show();
+                                    @Override
+                                    public void onComplete(DatabaseError databaseError, boolean b, DataSnapshot dataSnapshot) {
+                                        if (databaseError != null) {
+                                            Log.d("TRANSACTION", "Database error occurred");
+                                            Toast.makeText(getApplicationContext(),
+                                                    "Database error occurred!",
+                                                    Toast.LENGTH_SHORT)
+                                                    .show();
+                                        } else {
+                                            createTeam(mTeamLocation);//All the important work is here!
+                                            Log.d("TRANSACTION", "Team Created!");
+                                            Toast.makeText(getApplicationContext(),
+                                                    "Team Created!",
+                                                    Toast.LENGTH_SHORT)
+                                                    .show();
+                                            //START GAME
+                                        }
                                     }
-                                    else {
-                                        createTeam(mTeamLocation);//All the important work is here!
-                                        Log.d("TRANSACTION", "Team Created!");
-                                        Toast.makeText(getApplicationContext(),
-                                                "Team Created!",
-                                                Toast.LENGTH_SHORT)
-                                                .show();
-                                    }
-                                }
-                            });
-                }
-                else {
-                    Toast.makeText(getApplicationContext(),
-                            "Please fill all details",
-                            Toast.LENGTH_SHORT)
-                            .show();
-                }
+                                });
+                    } else {
+                        Toast.makeText(getApplicationContext(),
+                                "Please fill all details",
+                                Toast.LENGTH_SHORT)
+                                .show();
+                    }
             }
         });
     }
@@ -165,7 +161,7 @@ public class CreateTeamActivity extends AppCompatActivity{
     }
 
     private void createBase (String teamId) {
-        Player newBase = new Player(mTeamName, teamId, "dummyPassword", true);
+        Player newBase = new Player(mTeamName, teamId, true);
 
         mFirebaseReference.child(Constants.FIREBASE.PLAYERS)
                 .child(teamId)
@@ -175,9 +171,22 @@ public class CreateTeamActivity extends AppCompatActivity{
     private void createPlayer(String teamId) {
         DatabaseReference node = mFirebaseReference.child(Constants.FIREBASE.PLAYERS).push();
 
-        Player newPlayer = new Player(mPlayerName, teamId, mPassword, false);
+        Player newPlayer = new Player(mPlayerName, teamId, false);
 
         node.setValue(newPlayer);
+
+        mFirebaseReference.child(Constants.FIREBASE.PLAYERS).child(node.getKey())
+                .addValueEventListener(new ValueEventListener() {
+                    @Override
+                    public void onDataChange(DataSnapshot dataSnapshot) {
+                        Player x = dataSnapshot.getValue(Player.class);
+                    }
+
+                    @Override
+                    public void onCancelled(DatabaseError databaseError) {
+
+                    }
+                });
     }
 
     private String addInGeoFire(String teamLocation) {
@@ -186,5 +195,12 @@ public class CreateTeamActivity extends AppCompatActivity{
         node.setValue(teamLocation);
 
         return node.getKey();
+    }
+
+    private void getAllExtras() {
+        Intent intent = getIntent();
+        mTeamName = intent.getSerializableExtra(Constants.EXTRAS.TEAMNAME).toString();
+        mPhone = intent.getSerializableExtra(Constants.EXTRAS.PHONE).toString();
+        mTeamRegistered = intent.getBooleanExtra(Constants.EXTRAS.TEAM_REGISTERED, false);
     }
 }

@@ -5,11 +5,20 @@ import android.content.SharedPreferences;
 import android.os.Bundle;
 import android.support.annotation.Nullable;
 import android.support.v7.app.AppCompatActivity;
+import android.text.Editable;
+import android.text.TextWatcher;
+import android.util.Log;
 import android.view.View;
 import android.widget.Button;
+import android.widget.EditText;
+import android.widget.Toast;
 
+import com.google.firebase.database.ChildEventListener;
+import com.google.firebase.database.DataSnapshot;
+import com.google.firebase.database.DatabaseError;
 import com.google.firebase.database.DatabaseReference;
 import com.google.firebase.database.FirebaseDatabase;
+import com.google.firebase.database.ValueEventListener;
 
 /**
  * Created by soubhagya on 27/1/17.
@@ -19,10 +28,16 @@ public class RegistrationActivity extends AppCompatActivity{
 
     private SharedPreferences mSharedPreferences;
     private String mPlayerId;
-    private Button mCreateButton;
-    private Button mJoinButton;
+
+    private String mTeamname;
+    private String mPhone;
 
     private DatabaseReference mFirebaseReference;
+
+    //UI components
+    private EditText mTeamnameEditText;
+    private EditText mPhoneEditText;
+    private Button mRegisterButton;
 
     @Override
     protected void onCreate(@Nullable Bundle savedInstanceState) {
@@ -46,28 +61,107 @@ public class RegistrationActivity extends AppCompatActivity{
     private void updateUI() {
         setContentView(R.layout.activity_registration);
 
-        mCreateButton = (Button) findViewById(R.id.create_button);
-        mCreateButton.setOnClickListener(new View.OnClickListener() {
+        mTeamnameEditText = (EditText) findViewById(R.id.team_name_editText);
+        mTeamnameEditText.addTextChangedListener(new TextWatcher() {
+            @Override
+            public void beforeTextChanged(CharSequence s, int start, int count, int after) {
+
+            }
+
+            @Override
+            public void onTextChanged(CharSequence s, int start, int before, int count) {
+                mTeamname = s.toString();
+            }
+
+            @Override
+            public void afterTextChanged(Editable s) {
+
+            }
+        });
+
+        mPhoneEditText = (EditText) findViewById(R.id.phone_editText);
+        mPhoneEditText.addTextChangedListener(new TextWatcher() {
+            @Override
+            public void beforeTextChanged(CharSequence s, int start, int count, int after) {
+
+            }
+
+            @Override
+            public void onTextChanged(CharSequence s, int start, int before, int count) {
+                mPhone = s.toString();
+            }
+
+            @Override
+            public void afterTextChanged(Editable s) {
+
+            }
+        });
+
+        mRegisterButton = (Button) findViewById(R.id.register_button);
+        mRegisterButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-
-                for (int i=1; i<=10; ++i) {
-                   mFirebaseReference.child(Constants.FIREBASE.AVAILABLE_LOCATIONS)
-                           .child("Location"+i)
-                           .setValue(i*10);
+                if (mTeamname != null && mPhone != null) {
+                    teamInDatabase(mTeamname, mPhone);
                 }
-
-                Intent intent = new Intent(RegistrationActivity.this, CreateTeamActivity.class);
-                startActivity(intent);
+                else {
+                    Toast.makeText(getApplicationContext(),
+                            "Please enter all details!",
+                            Toast.LENGTH_SHORT)
+                            .show();
+                }
             }
         });
+    }
 
-        mJoinButton = (Button) findViewById(R.id.join_button);
-        mJoinButton.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                //upcoming
-            }
-        });
+    private void teamInDatabase(String teamname, final String phone) {
+        DatabaseReference registeredTeams = mFirebaseReference
+                                            .child(Constants.FIREBASE.REGISTERED_TEAMS);
+
+        final String phoneTeam = phone + teamname;
+
+        registeredTeams.child(phoneTeam)
+                .addValueEventListener(new ValueEventListener() {
+                    @Override
+                    public void onDataChange(DataSnapshot dataSnapshot) {
+                        if (dataSnapshot.exists()) {
+                            Toast.makeText(getApplicationContext(),
+                                    "Team already exists!",
+                                    Toast.LENGTH_SHORT)
+                                    .show();
+
+                            Intent intent = CreateTeamActivity
+                                    .newIntent(RegistrationActivity.this,
+                                            true,
+                                            mTeamname,
+                                            mPhone);
+                            startActivity(intent);
+                        }
+                        else {
+                            Toast.makeText(getApplicationContext(),
+                                    "Creating Team!",
+                                    Toast.LENGTH_SHORT)
+                                    .show();
+
+                            Intent intent = CreateTeamActivity
+                                    .newIntent(RegistrationActivity.this,
+                                            false,
+                                            mTeamname,
+                                            mPhone);
+                            startActivity(intent);
+                        }
+                    }
+
+                    @Override
+                    public void onCancelled(DatabaseError databaseError) {
+                        if (databaseError != null) {
+                            Log.d("REGISTRATION ACTIVITY", "Error occurred in database");
+                            Toast.makeText(getApplicationContext(),
+                                    "Database error occurred!",
+                                    Toast.LENGTH_SHORT)
+                                    .show();
+                        }
+                    }
+                });
     }
 }

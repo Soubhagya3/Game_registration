@@ -9,8 +9,11 @@ import java.util.ArrayList;
 public class Team {
 
     private String mTeamName;
-    //private String mBaseLocation;
-    //private ArrayList<String> mPlayerList;
+    private int mPosLeft;
+
+    private ArrayList<String> mPlayerList;
+
+    public Team(){}//Default constructer for firebase
 
     public Team(String teamName) {
         mTeamName = teamName;
@@ -18,5 +21,13 @@ public class Team {
 
     public String getTeamName() {
         return mTeamName;
+    }
+
+    public int getPosLeft() {
+        return mPosLeft;
+    }
+
+    public ArrayList<String> getPlayerList() {
+        return mPlayerList;
     }
 }

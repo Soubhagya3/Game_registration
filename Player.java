@@ -8,17 +8,13 @@ public class Player {
 
     private String mPlayerName;
     private String mTeamId;
-    private String mPlayerPhone;
     private boolean mIsBase;
 
-    public String getPlayerPhone() {
-        return mPlayerPhone;
-    }
+    public Player(){}//Default constructer for firebase
 
-    public Player(String name, String teamId, String playerPhone, Boolean isBase) {
+    public Player(String name, String teamId, Boolean isBase) {
         mPlayerName = name;
         mTeamId = teamId;
-        mPlayerPhone = playerPhone;
         mIsBase = isBase;
     }
 
@@ -29,10 +25,6 @@ public class Player {
     public String getPlayerName() {
 
         return mPlayerName;
-    }
-
-    public void setPlayerName(String playerName) {
-        mPlayerName = playerName;
     }
 
     public boolean isBase() {
